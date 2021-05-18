@@ -1,0 +1,11 @@
+version = 0.1
+
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "eks-node-drainer"
+s3_bucket = "liyuguang-sam"
+s3_prefix = "eks-node-drainer"
+capabilities = "CAPABILITY_NAMED_IAM"
+region = "us-east-1"
+confirm_changeset = false
+parameter_overrides = "AutoScalingGroup=\"eks-liyuguang-test-node-group-self-managed\" EksCluster=\"eks-liyuguang-test\""

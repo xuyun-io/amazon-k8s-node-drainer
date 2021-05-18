@@ -26,6 +26,7 @@ Resources:
     DrainerRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName: eks-node-drainer
         AssumeRolePolicyDocument:
           Version: 2012-10-17
           Statement:
@@ -54,6 +55,7 @@ Resources:
     DrainerFunction:
         Type: AWS::Serverless::Function
         Properties:
+          FunctionName: EKSNodeDrainer
           CodeUri: drainer/
           Handler: handler.lambda_handler
           Runtime: python3.7
