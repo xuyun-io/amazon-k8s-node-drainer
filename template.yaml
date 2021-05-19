@@ -26,7 +26,7 @@ Resources:
     DrainerRole:
       Type: AWS::IAM::Role
       Properties:
-        RoleName: eks-node-drainer
+        RoleName: qa-eks-node-drainer
         AssumeRolePolicyDocument:
           Version: 2012-10-17
           Statement:
@@ -48,14 +48,22 @@ Resources:
                     - ec2:DescribeInstances
                     - eks:DescribeCluster
                     - sts:GetCallerIdentity
+                    - ec2:DescribeInstanceAttribute
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:CreateNetworkInterface
+                    - ec2:DeleteNetworkInterface 
                   Resource: '*'
         ManagedPolicyArns:
           - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
+    LambdaSG:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties: 
+        GroupDescription: Used for lambda.
+        VpcId: vpc-030659c761f3eedf9
     DrainerFunction:
         Type: AWS::Serverless::Function
         Properties:
-          FunctionName: EKSNodeDrainer
+          FunctionName: QAEKSNodeDrainer
           CodeUri: drainer/
           Handler: handler.lambda_handler
           Runtime: python3.7
@@ -64,19 +72,34 @@ Resources:
             Variables:
               CLUSTER_NAME: !Ref EksCluster
           Role: !GetAtt DrainerRole.Arn
-          Events:
-            TerminationEvent:
-              Type: CloudWatchEvent
-              Properties:
-                Pattern:
-                  source:
-                    - aws.autoscaling
-                  detail-type:
-                    - EC2 Instance-terminate Lifecycle Action
-                  detail:
-                    AutoScalingGroupName:
-                      - !Ref AutoScalingGroup
-
+          VpcConfig:
+            SecurityGroupIds: 
+              - !Ref LambdaSG
+            SubnetIds: 
+              - subnet-026a659f410785651
+              - subnet-017b8f9cd26aec50c
+              - subnet-0a67a085acfa4de87
+    EventRule: 
+        Type: AWS::Events::Rule
+        Properties: 
+          Name: eks-node-drainer-rule
+          Description: "EventRule"
+          EventPattern: 
+            source: 
+              - "aws.autoscaling"
+            detail-type: 
+              - "EC2 Instance-terminate Lifecycle Action"
+            detail: 
+              AutoScalingGroupName:
+                - !Ref AutoScalingGroup
+          State: "ENABLED"
+          Targets: 
+            - 
+              Arn: 
+                Fn::GetAtt: 
+                  - "DrainerFunction"
+                  - "Arn"
+              Id: "eks-node-drainer-rule"
     Permission:
       Type: AWS::Lambda::Permission
       Properties:
